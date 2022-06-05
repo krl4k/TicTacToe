@@ -2,10 +2,11 @@ import React from 'react';
 // import ReactDOM from 'react-dom';
 import {createRoot} from 'react-dom/client';
 import './index.css';
+import {queries} from "@testing-library/react";
 
 function Square(props) {
     return (
-       <button className="square" onClick={() => {props.onClick()}}>
+       <button className="square" onClick={() => {props.onClick()}} style={{background: props.color}}>
            {props.value}
        </button>
     );
@@ -13,33 +14,31 @@ function Square(props) {
 
 
 class Board extends React.Component {
-    renderSquare(i) {
+    renderSquare(i, isRed = false) {
         return <
             Square
             value={this.props.squares[i]}
-            onClick={() => this.props.onClick(i)} />;
+            onClick={() => this.props.onClick(i)}
+            color={isRed === true ? '#F00000' : '#FFF000'}
+        />;
     }
 
     render() {
+        let rows = 3;
+        let columns = 3;
         return (
             <div>
-                <div className="board-row">
-                    {this.renderSquare(0)}
-                    {this.renderSquare(1)}
-                    {this.renderSquare(2)}
+                {[...Array(rows).keys()].map(row => (
+                <div className={"board-row"} key={row}>
+                    {[...Array(columns).keys()].map(column => (
+                        // this.props.winnerLine.map((e, index) =>
+                            this.renderSquare(row * columns + column, this.props.winnerLine?.indexOf(row * columns + column) >= 0)
+                        // )
+                    ))}
                 </div>
-                <div className="board-row">
-                    {this.renderSquare(3)}
-                    {this.renderSquare(4)}
-                    {this.renderSquare(5)}
-                </div>
-                <div className="board-row">
-                    {this.renderSquare(6)}
-                    {this.renderSquare(7)}
-                    {this.renderSquare(8)}
-                </div>
+                ))}
             </div>
-        );
+        )
     }
 }
 
@@ -61,7 +60,7 @@ class Game extends React.Component {
         const history = this.state.history.slice(0, this.state.stepNumber + 1);
         const current = history[history.length - 1];
         const squares = current.squares.slice();
-        if (calculateWinner(squares) || squares[i]) {
+        if (calculateWinner(squares).squares || squares[i]) {
             return;
         }
         squares[i] = this.state.xIsNext ? 'X' : 'O';
@@ -109,7 +108,7 @@ class Game extends React.Component {
     render() {
         const history = this.state.history;
         const current = history[this.state.stepNumber];
-        const winner = calculateWinner(current.squares);
+        const res = calculateWinner(current.squares);
 
         const moves = history.map((step, move) => {
             const desc = move ? 'Go to move #' + move : 'Go to game start';
@@ -121,9 +120,10 @@ class Game extends React.Component {
         })
 
         let status;
-
-        if (winner ) {
-            status =  this.getTryAgainBtn(`Winner: ${winner}`);
+        let winnerLine;
+        if (res.squares) {
+            status =  this.getTryAgainBtn(`Winner: ${res.squares}`);
+            winnerLine = res.winnerLine;
         } else if (this.state.stepNumber === 9) {
             status =  this.getTryAgainBtn(`Friendship won`);
         } else {
@@ -135,6 +135,7 @@ class Game extends React.Component {
                     <Board
                         squares={current.squares}
                         onClick={(i)=>this.handleClick(i)}
+                        winnerLine={winnerLine}
                     />
                 </div>
                 <div className="game-info">
@@ -161,10 +162,13 @@ function calculateWinner(squares) {
     for (let i = 0; i < lines.length; i++) {
         const [a, b, c] = lines[i];
         if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-            return squares[a];
+            return {
+                squares: squares[a],
+                winnerLine: lines[i]
+            };
         }
     }
-    return null;
+    return {squares: null};
 }
 
 // ========================================
